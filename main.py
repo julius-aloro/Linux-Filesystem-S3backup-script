@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from datetime import datetime
 
 # Date variable
@@ -22,12 +23,14 @@ if not os.path.exists(s3_backup_dir):
     os.makedirs(s3_backup_dir)
 
 # Copying raw files to s3 backup directory
-# try:
-shutil.copytree(etc_dir, os.path.join(s3_backup_dir, f'etc-{date_and_time}'))
-shutil.copytree(app_dir, os.path.join(s3_backup_dir, f'appdir-{date_and_time}'))
-shutil.copytree(logs, os.path.join(s3_backup_dir, f'logs-{date_and_time}'))
-# # except:
-#     print('Error is found, please manually check files..')
-# else:
-#     print('Backup is completed successfully!')
+shutil.copytree(etc_dir, os.path.join(s3_backup_dir, f'{date_and_time}-etc'))
+shutil.copytree(app_dir, os.path.join(s3_backup_dir, f'{date_and_time}-appdir'))
+shutil.copytree(logs, os.path.join(s3_backup_dir, f'{date_and_time}-logs'))
+
+# Checker for raw directories. If more than 3, delete the oldest
+raw_backup_count = list(sorted(os.listdir(s3_backup_dir)))
+os.chdir(s3_backup_dir)
+if len(raw_backup_count) > 3:
+    for dir in raw_backup_count[0:3]:
+        shutil.rmtree(dir)
 
