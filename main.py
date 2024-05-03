@@ -1,6 +1,6 @@
 import os
 import shutil
-import sys
+import zipfile
 from datetime import datetime
 
 # Date variable
@@ -27,10 +27,25 @@ shutil.copytree(etc_dir, os.path.join(s3_backup_dir, f'{date_and_time}-etc'))
 shutil.copytree(app_dir, os.path.join(s3_backup_dir, f'{date_and_time}-appdir'))
 shutil.copytree(logs, os.path.join(s3_backup_dir, f'{date_and_time}-logs'))
 
-# Checker for raw directories. If more than 3, delete the oldest
-raw_backup_count = list(sorted(os.listdir(s3_backup_dir)))
+
+
+# List of directories
+raw_random_files = sorted((list(os.listdir(s3_backup_dir))))
+dir_count = len(raw_random_files)
+
+# Checks the directory if s3 backup folder has directories and/or files not related to backup will be deleted
 os.chdir(s3_backup_dir)
-if len(raw_backup_count) > 3:
-    for dir in raw_backup_count[0:3]:
-        shutil.rmtree(dir)
+for directory in raw_random_files:
+    if 'appdir' not in directory and 'etc' not in directory and 'logs' not in directory and os.path.isdir(directory) == True:
+        shutil.rmtree(directory)
+    elif os.path.isdir(directory) == False:
+        os.remove(directory)
+    # elif zipfile.is_zipfile(directory) == True
+
+# Checks if there are more than 1 copies of appdir/etc/logs, delete the oldest ones
+raw_relevant_files = sorted((list(os.listdir(s3_backup_dir))))
+if dir_count > 3:
+    os.chdir(s3_backup_dir)
+    for directory2 in raw_relevant_files[:-3]:
+        shutil.rmtree(directory2)
 
