@@ -1,3 +1,4 @@
+
 import os
 import shutil
 import zipfile
@@ -7,13 +8,13 @@ from datetime import datetime
 date_and_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 # Directories to be used
-backup_dir = '/backup/'
-s3_backup_dir = '/backup/s3_backup/'
+backup_dir = os.path.join('/', 'backup')
+s3_backup_dir = os.path.join('/', 'backup', 's3_backup')
 
 # Directories to backup
-etc_dir = '/etc/'
-app_dir = '/appdir/'
-logs = '/var/log/'
+etc_dir = os.path.join('/', 'etc')
+app_dir = os.path.join('/', 'appdir')
+logs = os.path.join('/', 'var', 'log')
 
 #Checking of the directories -- create if non-existent
 if not os.path.exists(backup_dir):
@@ -22,30 +23,122 @@ if not os.path.exists(backup_dir):
 if not os.path.exists(s3_backup_dir):
     os.makedirs(s3_backup_dir)
 
+# Creation of daily, weekly, and monthly directories
+daily_dir = os.path.join(s3_backup_dir, 'daily')
+weekly_dir = os.path.join(s3_backup_dir, 'weekly')
+monthly_dir = os.path.join(s3_backup_dir, 'monthly')
+
+if not os.path.exists(daily_dir):
+    os.makedirs(os.path.join(s3_backup_dir, 'daily'))
+if not os.path.exists(weekly_dir):
+    os.makedirs(os.path.join(s3_backup_dir, 'weekly'))
+if not os.path.exists(monthly_dir):
+    os.makedirs(os.path.join(s3_backup_dir, 'monthly'))
+
+
 # Copying raw files to s3 backup directory
 shutil.copytree(etc_dir, os.path.join(s3_backup_dir, f'{date_and_time}-etc'))
 shutil.copytree(app_dir, os.path.join(s3_backup_dir, f'{date_and_time}-appdir'))
 shutil.copytree(logs, os.path.join(s3_backup_dir, f'{date_and_time}-logs'))
 
-
-
 # List of directories
-raw_random_files = sorted((list(os.listdir(s3_backup_dir))))
-dir_count = len(raw_random_files)
+mixed_files = sorted((list(os.listdir(s3_backup_dir))))
 
-# Checks the directory if s3 backup folder has directories and/or files not related to backup will be deleted
+# Checks and delete unrelated files in the s3 backup directory
+raw_relevant_directories = sorted(list())
+zipped_relevant_files = sorted(list())
+schedule_directories = sorted(list())
+
+# Check if file is a zip file or a directory
+mixed_files_copy = mixed_files.copy()
+for item in mixed_files_copy:
+    if zipfile.is_zipfile(item) and 'backup' in item:
+        zipped_relevant_files.append(item)
+    elif os.path.isdir(os.path.join(s3_backup_dir, item)) and 'appdir' in item or 'etc' in item or 'logs' in item:
+        raw_relevant_directories.append(item)
+    elif os.path.isdir(os.path.join(s3_backup_dir, item)) and item == 'daily' or item == 'weekly' or item == 'monthly':
+        schedule_directories.append(item)
+
+
+# Check from the relevant list of zipfile and directories. If does not belong to the list, remove.
 os.chdir(s3_backup_dir)
-for directory in raw_random_files:
-    if 'appdir' not in directory and 'etc' not in directory and 'logs' not in directory and os.path.isdir(directory) == True:
-        shutil.rmtree(directory)
-    elif os.path.isdir(directory) == False:
-        os.remove(directory)
-    # elif zipfile.is_zipfile(directory) == True
+for item in os.listdir(s3_backup_dir):
+    if item in raw_relevant_directories or item in zipped_relevant_files or item in schedule_directories:
+        continue
+    elif os.path.isdir(os.path.join(s3_backup_dir, item)):
+        shutil.rmtree(os.path.join(s3_backup_dir, item))
+    elif zipfile.is_zipfile(os.path.join(s3_backup_dir, item)):
+        os.remove(os.path.join(s3_backup_dir, item))
 
-# Checks if there are more than 1 copies of appdir/etc/logs, delete the oldest ones
-raw_relevant_files = sorted((list(os.listdir(s3_backup_dir))))
-if dir_count > 3:
-    os.chdir(s3_backup_dir)
-    for directory2 in raw_relevant_files[:-3]:
-        shutil.rmtree(directory2)
 
+
+
+
+
+
+# # Archiving function
+# def create_zip():
+#     os.chdir(s3_backup_dir)
+#     for directories in os.listdir(s3_backup_dir):
+#         shutil.make_archive(f'backup_{date_and_time}', 'zip', directories)
+
+# create_zip()
+
+
+
+# # Checks if there are more than 1 copies of appdir/etc/logs, delete the oldest ones
+# dir_count = 0 
+# zip_file_count = 
+# for dirs in os.listdir(s3_backup_dir):
+#     if os.path.isdir(dirs) == True:
+#         dir_count += 1
+#         raw_relevant_files.append(dirs)
+
+# if dir_count > 3:
+#     os.chdir(s3_backup_dir)
+#     for directory in raw_relevant_files[:-3]:
+#         shutil.rmtree(directory)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # # Archiving of directories
+# # raw_relevant_files = sorted((list(os.listdir(s3_backup_dir))))
+# # create_zip(s3_backup_dir, raw_relevant_files)
+
+
+
+
+
+# # # daily tar
+# # raw_relevant_files = sorted((list(os.listdir(s3_backup_dir))))
+# # tar_file_name = f'{date_and_time}-backup.tar'
+# # os.chdir(s3_backup_dir)
+# # create_tar_gzip(tar_file_name, raw_relevant_files)
+
+
+# # raw_relevant_files = sorted((list(os.listdir(s3_backup_dir))))
+# # os.chdir(s3_backup_dir)
+# # # output_filename = 'daily_backup.tar.gz'
+# # for directory in raw_relevant_files:
+# #     shutil.make_archive(f'{date_and_time}.daily_backup', 'gzip', directory)
+    
+
+# # for root, dirs, files in os.walk(s3_backup_dir):
+# #     # for name in files:
+# #     #     print(name)
+# #     for name in dirs:
+#         # print(name)
+# # gzip file function
