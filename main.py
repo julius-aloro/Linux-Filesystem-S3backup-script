@@ -54,11 +54,10 @@ mixed_files_copy = mixed_files.copy()
 for item in mixed_files_copy:
     if zipfile.is_zipfile(item) and 'backup' in item:
         zipped_relevant_files.append(item)
-    elif os.path.isdir(os.path.join(s3_backup_dir, item)) and 'appdir' in item or 'etc' in item or 'logs' in item:
+    elif os.path.isdir(os.path.join(s3_backup_dir, item)) and len(item) >= 23 and 'appdir' in item or 'etc' in item or 'logs' in item:
         raw_relevant_directories.append(item)
     elif os.path.isdir(os.path.join(s3_backup_dir, item)) and item == 'daily' or item == 'weekly' or item == 'monthly':
         schedule_directories.append(item)
-
 
 # Check from the relevant list of zipfile and directories. If does not belong to the list, remove.
 os.chdir(s3_backup_dir)
@@ -69,11 +68,23 @@ for item in os.listdir(s3_backup_dir):
         shutil.rmtree(os.path.join(s3_backup_dir, item))
     elif zipfile.is_zipfile(os.path.join(s3_backup_dir, item)):
         os.remove(os.path.join(s3_backup_dir, item))
+    elif os.path.isfile(os.path.join(s3_backup_dir, item)):
+        os.remove(os.path.join(s3_backup_dir, item))
 
+# Remove the duplicate backups from the previous run, leaving only 3 folders that are updated daily (appdir, logs, etc)
+if len(raw_relevant_directories) > 3:
+    for directory in raw_relevant_directories[:-3]:
+        shutil.rmtree(directory)
 
+# Re-initialize relevant raw backups (update the list)
+daily_raw_backups = list()
+for directory in os.listdir(s3_backup_dir):
+    if directory == 'daily' or directory == 'weekly' or directory == 'monthly':
+        continue
+    else:
+        daily_raw_backups.append(directory)
 
-
-
+# Create the archive
 
 
 # # Archiving function
@@ -94,10 +105,6 @@ for item in os.listdir(s3_backup_dir):
 #         dir_count += 1
 #         raw_relevant_files.append(dirs)
 
-# if dir_count > 3:
-#     os.chdir(s3_backup_dir)
-#     for directory in raw_relevant_files[:-3]:
-#         shutil.rmtree(directory)
 
 
 
