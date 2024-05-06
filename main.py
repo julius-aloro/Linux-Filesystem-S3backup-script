@@ -85,10 +85,14 @@ for directory in os.listdir(s3_backup_dir):
         daily_raw_backups.append(directory)
 
 # Create the archive
-
-
+with zipfile.ZipFile(os.path.join(s3_backup_dir, 'daily', 'test.zip'), 'a', compression=zipfile.ZIP_DEFLATED) as zipf:
+    for dirpath, dirnames, filenames in os.walk(s3_backup_dir):
+        for dirname in dirnames:
+            zipf.write(os.path.join(s3_backup_dir, 'daily', 'test.zip'))
+        for filename in filenames:
+            print('File:', os.path.join(dirpath, filename))
 # # Archiving function
-# def create_zip():
+# def create_zip(): 
 #     os.chdir(s3_backup_dir)
 #     for directories in os.listdir(s3_backup_dir):
 #         shutil.make_archive(f'backup_{date_and_time}', 'zip', directories)
